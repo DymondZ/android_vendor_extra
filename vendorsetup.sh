@@ -220,7 +220,6 @@ function release() {
         unset GMS_MAKEFILE
         unset TARGET_UNOFFICIAL_BUILD_ID
         local variant_name="VANILLA"
-        skip_ota=true
     else
         export WITH_GMS=true
         export GMS_MAKEFILE=gms.mk
