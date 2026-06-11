@@ -4,10 +4,10 @@ export WITH_GMS=true
 export GMS_MAKEFILE=gms.mk
 export TARGET_UNOFFICIAL_BUILD_ID=GMS
 
-SF_USER="aryannn999"
+SF_USER="dymondz"
 SF_HOST="frs.sourceforge.net"
-SF_PROJECT_ROOT="/home/frs/project/noprincesshere"
-JOBS=14
+SF_PROJECT_ROOT="/home/frs/project/dymondz"
+JOBS=12
 
 convertsecs() {
     ((h=${1}/3600))
@@ -322,7 +322,7 @@ function release() {
 
         local tag_name=$(date -u -d @"${datetime}" +%m%d%Y)
 
-        local sf_folder_url="https://sourceforge.net/projects/noprincesshere/files/lineage-${lineage_ver}/${device}/${tag_name}"
+        local sf_folder_url="https://sourceforge.net/projects/dymondz/files/lineage-${lineage_ver}/${device}/${tag_name}"
         local sf_direct_url="${sf_folder_url}/$(basename "${filename}")/download"
 
         if [[ "${skip_ota}" == "false" ]]; then
@@ -389,7 +389,7 @@ function release() {
             echo "[INFO] Vanilla build: Skipping upload of boot/recovery images."
         fi
 
-        local changelog_link="https://raw.githubusercontent.com/basamaryan/ota/master/${device}.txt"
+        local changelog_link="https://raw.githubusercontent.com/dymondz/ota/master/${device}.txt"
         local full_device_name=$(get_device_name "$device")
         
         local release_msg="*LineageOS ${lineage_ver} for ${full_device_name} (${device})*
