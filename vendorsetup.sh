@@ -4,6 +4,13 @@ export WITH_GMS=true
 export GMS_MAKEFILE=gms.mk
 export TARGET_UNOFFICIAL_BUILD_ID=GMS
 
+TELEGRAM_ENV="${ANDROID_BUILD_TOP:-$PWD}/.telegram.env"
+if [[ -f "${TELEGRAM_ENV}" ]]; then
+    set -a
+    source "${TELEGRAM_ENV}"
+    set +a
+fi
+
 SF_USER="dymondz"
 SF_HOST="frs.sourceforge.net"
 SF_PROJECT_ROOT="/home/frs/project/dymondz"
