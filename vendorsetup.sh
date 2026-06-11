@@ -360,33 +360,28 @@ function release() {
         echo "[INFO] Uploading main zip..."
         rsync -Ph "${out}/${filename}" "${out}/${filename}.sha256sum" "${SF_USER}@${SF_HOST}:${remote_dir}/"
 
-        # Only upload additional images if NOT vanilla
-        if [[ "${use_vanilla}" == "false" ]]; then
-            local standard_images=("boot.img" "dtbo.img" "recovery.img")
-            for img in "${standard_images[@]}"; do
-                if [[ -f "${out}/${img}" ]]; then
-                    echo "Found ${img}, uploading..."
-                    rsync -Ph "${out}/${img}" "${SF_USER}@${SF_HOST}:${remote_dir}/"
-                fi
-            done
-
-            local has_vendor_boot=false
-            if [[ -f "${out}/vendor_boot.img" ]]; then
-                 echo "Found vendor_boot.img, uploading..."
-                 rsync -Ph "${out}/vendor_boot.img" "${SF_USER}@${SF_HOST}:${remote_dir}/"
-                 has_vendor_boot=true
+        local standard_images=("boot.img" "dtbo.img" "recovery.img")
+        for img in "${standard_images[@]}"; do
+            if [[ -f "${out}/${img}" ]]; then
+                echo "Found ${img}, uploading..."
+                rsync -Ph "${out}/${img}" "${SF_USER}@${SF_HOST}:${remote_dir}/"
             fi
+        done
 
-            if [[ -f "${out}/vbmeta.img" ]]; then
-                if [[ "${has_vendor_boot}" == "true" ]]; then
-                    echo "Found vbmeta.img and vendor_boot present, uploading..."
-                    rsync -Ph "${out}/vbmeta.img" "${SF_USER}@${SF_HOST}:${remote_dir}/"
-                else
-                    echo "Skipping vbmeta.img because vendor_boot.img was not found."
-                fi
+        local has_vendor_boot=false
+        if [[ -f "${out}/vendor_boot.img" ]]; then
+             echo "Found vendor_boot.img, uploading..."
+             rsync -Ph "${out}/vendor_boot.img" "${SF_USER}@${SF_HOST}:${remote_dir}/"
+             has_vendor_boot=true
+        fi
+
+        if [[ -f "${out}/vbmeta.img" ]]; then
+            if [[ "${has_vendor_boot}" == "true" ]]; then
+                echo "Found vbmeta.img and vendor_boot present, uploading..."
+                rsync -Ph "${out}/vbmeta.img" "${SF_USER}@${SF_HOST}:${remote_dir}/"
+            else
+                echo "Skipping vbmeta.img because vendor_boot.img was not found."
             fi
-        else
-            echo "[INFO] Vanilla build: Skipping upload of boot/recovery images."
         fi
 
         local changelog_link="https://raw.githubusercontent.com/dymondz/ota/master/${device}.txt"
