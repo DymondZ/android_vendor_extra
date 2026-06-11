@@ -4,7 +4,9 @@ export WITH_GMS=true
 export GMS_MAKEFILE=gms.mk
 export TARGET_UNOFFICIAL_BUILD_ID=GMS
 
-TELEGRAM_ENV="${ANDROID_BUILD_TOP:-$PWD}/.telegram.env"
+EXTRA_VENDOR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+EXTRA_TOP="$(cd "${EXTRA_VENDOR_DIR}/../.." && pwd)"
+TELEGRAM_ENV="${ANDROID_BUILD_TOP:-${EXTRA_TOP}}/.telegram.env"
 if [[ -f "${TELEGRAM_ENV}" ]]; then
     set -a
     source "${TELEGRAM_ENV}"
