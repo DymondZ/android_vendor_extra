@@ -40,11 +40,15 @@ get_device_name() {
 notify_chat() {
     local message="$1"
     if [[ -n "${TELEGRAM_TOKEN}" && -n "${TELEGRAM_CHAT}" ]]; then
-        curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+        local response
+        response=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT}" \
             -d text="${message}" \
             -d parse_mode="Markdown" \
-            -d disable_web_page_preview="true" > /dev/null
+            -d disable_web_page_preview="true")
+        if [[ "${response}" != *'"ok":true'* ]]; then
+            echo "[WARN] Telegram chat notification failed: ${response}"
+        fi
     else
         echo "[WARN] Chat credentials not set."
     fi
