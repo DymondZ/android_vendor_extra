@@ -30,11 +30,11 @@ ifeq ($(TARGET_PRODUCT),lineage_martini)
   $(call inherit-product-if-exists, vendor/oplus/camera/opluscamera.mk)
 endif
 
-ifeq ($(WITH_GMS),true)
 # OTA
 PRODUCT_PACKAGES += \
     UpdaterOverlay
 
+ifeq ($(WITH_GMS),true)
 # Overlay
 PRODUCT_PACKAGES += \
     SettingsOverlayCustom
