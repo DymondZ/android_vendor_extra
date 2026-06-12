@@ -157,17 +157,6 @@ sync() {
 
     repo sync --force-sync -d -j"${JOBS}" || return 1
 
-    sync_repo hardware/xiaomi                "${lineage}/android_hardware_xiaomi"
-    sync_repo hardware/motorola              "${lineage}/android_hardware_motorola"
-    sync_repo hardware/oplus                 "${lineage}/android_hardware_oplus"
-    sync_repo hardware/sony/timekeep         "${lineage}/android_hardware_sony_timekeep"
-    sync_repo hardware/pixelworks/interfaces "${lineage}/android_hardware_pixelworks_interfaces"
-    #sync_repo hardware/ayn                   "${lineage}/android_hardware_ayn"
-    sync_repo hardware/mediatek              "${lineage}/android_hardware_mediatek"
-    sync_repo device/mediatek/sepolicy_vndr  "${lineage}/android_device_mediatek_sepolicy_vndr"
-    sync_repo packages/apps/ParanoidSense    "${pixelos}/android_packages_apps_ParanoidSense"    "sixteen-qpr2"
-    sync_repo packages/apps/DolbyAtmos       "${pixelos}/android_packages_apps_DolbyAtmos"       "sixteen-qpr2"
-
     apply_patches
 
     echo "==> Sync complete."
