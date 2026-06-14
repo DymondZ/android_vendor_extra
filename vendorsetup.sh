@@ -196,7 +196,7 @@ apply_patches() {
 function release() {
     local devices=()
     local skip_sync=false
-    local skip_picks=true
+    local skip_picks=false
     local skip_ota=false
     local use_vanilla=true
     local top="${ANDROID_BUILD_TOP:-$PWD}"
