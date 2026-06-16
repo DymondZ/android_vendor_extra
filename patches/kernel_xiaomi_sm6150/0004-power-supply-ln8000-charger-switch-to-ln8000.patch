@@ -1,0 +1,32 @@
+From 57fdd881b9e9c116267eac841c1dba8df5d96a9f Mon Sep 17 00:00:00 2001
+From: vantoman <Mustafa.vantom@gmail.com>
+Date: Sat, 18 Jan 2025 23:45:08 +0200
+Subject: [PATCH] power: supply: ln8000_charger: Switch to ln8000
+
+Change-Id: I99a39b0890499b6a54cb5e95dca0f7ae6fa50b75
+---
+ drivers/power/supply/ti/ln8000_charger.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/power/supply/ti/ln8000_charger.c b/drivers/power/supply/ti/ln8000_charger.c
+index a1e092654672..c2947f1c95ac 100644
+--- a/drivers/power/supply/ti/ln8000_charger.c
++++ b/drivers/power/supply/ti/ln8000_charger.c
+@@ -952,7 +952,7 @@ static int ln8000_charger_get_property(struct power_supply *psy,
+         }
+         break;
+     case POWER_SUPPLY_PROP_MODEL_NAME:
+-        val->strval = "bq2597x-master";
++        val->strval = "ln8000";
+         break;
+     default:
+         return -EINVAL;
+@@ -1535,7 +1535,7 @@ static int ln8000_psy_register(struct ln8000_info *info)
+ {
+     info->psy_cfg.drv_data = info;
+     info->psy_cfg.of_node  = info->client->dev.of_node;
+-    info->psy_desc.name 		= "bq2597x-master";
++    info->psy_desc.name 		= "ln8000";
+     info->psy_desc.type 		= POWER_SUPPLY_TYPE_MAINS;
+     info->psy_desc.properties	= ln8000_charger_props;
+     info->psy_desc.num_properties = ARRAY_SIZE(ln8000_charger_props);
