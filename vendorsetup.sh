@@ -350,45 +350,46 @@ function release() {
             )
         fi
 
-        local remote_dir="${SF_PROJECT_ROOT}/lineage-${lineage_ver}/${device}/${tag_name}"
+        if [[ "${skip_ota}" == "false" ]]; then
+            local remote_dir="${SF_PROJECT_ROOT}/lineage-${lineage_ver}/${device}/${tag_name}"
 
-        {
-            echo "-mkdir ${SF_PROJECT_ROOT}/lineage-${lineage_ver}"
-            echo "-mkdir ${SF_PROJECT_ROOT}/lineage-${lineage_ver}/${device}"
-            echo "-mkdir ${remote_dir}"
-        } | sftp -b - "${SF_USER}@${SF_HOST}" >/dev/null 2>&1 || true
+            {
+                echo "-mkdir ${SF_PROJECT_ROOT}/lineage-${lineage_ver}"
+                echo "-mkdir ${SF_PROJECT_ROOT}/lineage-${lineage_ver}/${device}"
+                echo "-mkdir ${remote_dir}"
+            } | sftp -b - "${SF_USER}@${SF_HOST}" >/dev/null 2>&1 || true
 
-        echo "[INFO] Uploading main zip..."
-        rsync -Ph "${out}/${filename}" "${out}/${filename}.sha256sum" "${SF_USER}@${SF_HOST}:${remote_dir}/"
+            echo "[INFO] Uploading main zip..."
+            rsync -Ph "${out}/${filename}" "${out}/${filename}.sha256sum" "${SF_USER}@${SF_HOST}:${remote_dir}/"
 
-        local standard_images=("boot.img" "dtbo.img" "recovery.img")
-        for img in "${standard_images[@]}"; do
-            if [[ -f "${out}/${img}" ]]; then
-                echo "Found ${img}, uploading..."
-                rsync -Ph "${out}/${img}" "${SF_USER}@${SF_HOST}:${remote_dir}/"
+            local standard_images=("boot.img" "dtbo.img" "recovery.img")
+            for img in "${standard_images[@]}"; do
+                if [[ -f "${out}/${img}" ]]; then
+                    echo "Found ${img}, uploading..."
+                    rsync -Ph "${out}/${img}" "${SF_USER}@${SF_HOST}:${remote_dir}/"
+                fi
+            done
+
+            local has_vendor_boot=false
+            if [[ -f "${out}/vendor_boot.img" ]]; then
+                 echo "Found vendor_boot.img, uploading..."
+                 rsync -Ph "${out}/vendor_boot.img" "${SF_USER}@${SF_HOST}:${remote_dir}/"
+                 has_vendor_boot=true
             fi
-        done
 
-        local has_vendor_boot=false
-        if [[ -f "${out}/vendor_boot.img" ]]; then
-             echo "Found vendor_boot.img, uploading..."
-             rsync -Ph "${out}/vendor_boot.img" "${SF_USER}@${SF_HOST}:${remote_dir}/"
-             has_vendor_boot=true
-        fi
-
-        if [[ -f "${out}/vbmeta.img" ]]; then
-            if [[ "${has_vendor_boot}" == "true" ]]; then
-                echo "Found vbmeta.img and vendor_boot present, uploading..."
-                rsync -Ph "${out}/vbmeta.img" "${SF_USER}@${SF_HOST}:${remote_dir}/"
-            else
-                echo "Skipping vbmeta.img because vendor_boot.img was not found."
+            if [[ -f "${out}/vbmeta.img" ]]; then
+                if [[ "${has_vendor_boot}" == "true" ]]; then
+                    echo "Found vbmeta.img and vendor_boot present, uploading..."
+                    rsync -Ph "${out}/vbmeta.img" "${SF_USER}@${SF_HOST}:${remote_dir}/"
+                else
+                    echo "Skipping vbmeta.img because vendor_boot.img was not found."
+                fi
             fi
-        fi
 
-        local changelog_link="https://raw.githubusercontent.com/dymondz/ota/master/${device}.txt"
-        local full_device_name=$(get_device_name "$device")
-        
-        local release_msg="*LineageOS ${lineage_ver} for ${full_device_name} (${device})*
+            local changelog_link="https://raw.githubusercontent.com/dymondz/ota/master/${device}.txt"
+            local full_device_name=$(get_device_name "$device")
+            
+            local release_msg="*LineageOS ${lineage_ver} for ${full_device_name} (${device})*
 
 📅 Build date: \`${date_pretty}\`
 🛡️ Security patch: \`${security_patch}\`
@@ -405,7 +406,10 @@ function release() {
 
 #${device}"
 
-        notify_channel "${release_msg}"
+            notify_channel "${release_msg}"
+        else
+            echo "[INFO] --no-ota set; skipping OTA update, SourceForge upload, and release channel post."
+        fi
         
         rm -rf "out/target/product/${device}"
     done
