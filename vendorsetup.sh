@@ -229,6 +229,9 @@ function release() {
         local variant_name="GMS"
     fi
 
+    local ota_status_msg=""
+    [[ "${skip_ota}" == "true" ]] && ota_status_msg=" Build mode: \`NO-OTA\`."
+
     cd "${top}" || return 1
 
     if [[ "${skip_sync}" == "false" ]]; then
@@ -258,7 +261,7 @@ function release() {
 
         local project_name=$(basename "$PWD")
         
-        notify_chat "*(i)* \`${project_name}\` compilation for \`${device}\` *started* on ${HOSTNAME}."
+        notify_chat "*(i)* \`${project_name}\` compilation for \`${device}\` *started* on ${HOSTNAME}.${ota_status_msg}"
         
         local build_start=$(date +%s)
 
@@ -266,7 +269,7 @@ function release() {
         breakfast "${device}"
 
         if [[ $? -ne 0 ]]; then
-             local fail_msg="*(i)* \`${project_name}\` compilation for \`${device}\` *failed* during breakfast on ${HOSTNAME}."
+             local fail_msg="*(i)* \`${project_name}\` compilation for \`${device}\` *failed* during breakfast on ${HOSTNAME}.${ota_status_msg}"
              upload_error_log "${device}" "${fail_msg}"
              echo "[WARN] Breakfast failed. Cleaning up and skipping ${device}."
              rm -rf "out/target/product/${device}"
@@ -280,14 +283,14 @@ function release() {
         local build_time=$(convertsecs "${diff}")
 
         if [[ ${result} -ne 0 ]]; then
-            local fail_msg="*(i)* \`${project_name}\` compilation for \`${device}\` *failed* on ${HOSTNAME}. Build variant: \`${variant_name}\`. Build time: \`${build_time}\`."
+            local fail_msg="*(i)* \`${project_name}\` compilation for \`${device}\` *failed* on ${HOSTNAME}. Build variant: \`${variant_name}\`. Build time: \`${build_time}\`.${ota_status_msg}"
             upload_error_log "${device}" "${fail_msg}"
             echo "[WARN] Build failed. Cleaning up and skipping ${device}."
             rm -rf "out/target/product/${device}"
             continue
         fi
         
-        notify_chat "*(i)* \`${project_name}\` compilation for \`${device}\` *completed successfully* on ${HOSTNAME}. Build variant: \`${variant_name}\`. Build time: \`${build_time}\`."
+        notify_chat "*(i)* \`${project_name}\` compilation for \`${device}\` *completed successfully* on ${HOSTNAME}. Build variant: \`${variant_name}\`. Build time: \`${build_time}\`.${ota_status_msg}"
 
         local out="${OUT:?OUT not set}"
 
