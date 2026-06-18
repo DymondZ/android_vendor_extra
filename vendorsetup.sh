@@ -414,6 +414,8 @@ function release() {
             echo "[INFO] --no-ota set; skipping OTA update, SourceForge upload, and release channel post."
         fi
         
-        rm -rf "out/target/product/${device}"
+        if [[ "${skip_ota}" == "false" ]]; then
+            rm -rf "out/target/product/${device}"
+        fi
     done
 }
