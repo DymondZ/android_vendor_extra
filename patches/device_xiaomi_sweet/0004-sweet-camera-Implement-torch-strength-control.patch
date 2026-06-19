@@ -1,0 +1,133 @@
+From c7e4cb9000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cyber Knight <cyberknight755@gmail.com>
+Date: Fri, 19 Jun 2026 22:32:00 +0200
+Subject: [PATCH 4/5] sweet: camera: Implement torch strength control
+
+Drive both PM6150L torch LEDs from the camera-service extension and cap the
+reported maximum at 255. The matching sysfs permissions are supplied by the
+sm6150-common torch-control patch.
+---
+ camera/Android.bp                  | 23 ++++++++++
+ camera/CameraProviderExtension.cpp | 69 +++++++++++++++++++++++++++++
+ device.mk                          |  3 ++
+ 3 files changed, 95 insertions(+)
+ create mode 100644 camera/Android.bp
+ create mode 100644 camera/CameraProviderExtension.cpp
+
+diff --git a/camera/Android.bp b/camera/Android.bp
+new file mode 100644
+--- /dev/null
++++ b/camera/Android.bp
+@@ -0,0 +1,23 @@
++//
++// Copyright (C) 2022 The LineageOS Project
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//      http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++//
++
++cc_library_static {
++    name: "libcameraservice_extension.sweet",
++    srcs: ["CameraProviderExtension.cpp"],
++    include_dirs: [
++        "frameworks/av/services/camera/libcameraservice/common",
++    ],
++}
+diff --git a/camera/CameraProviderExtension.cpp b/camera/CameraProviderExtension.cpp
+new file mode 100644
+--- /dev/null
++++ b/camera/CameraProviderExtension.cpp
+@@ -0,0 +1,69 @@
++/*
++ * Copyright (C) 2024 LibreMobileOS Foundation
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include "CameraProviderExtension.h"
++
++#include <fstream>
++
++#define TORCH_BRIGHTNESS "brightness"
++#define TOGGLE_SWITCH "/sys/devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:switch_2/brightness"
++
++static std::string kTorchLedPaths[] = {
++        "/sys/devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:torch_0",
++        "/sys/devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:torch_1",
++};
++
++template <typename T>
++static void set(const std::string& path, const T& value) {
++    std::ofstream file(path);
++    file << value;
++}
++
++template <typename T>
++static T get(const std::string& path, const T& def) {
++    std::ifstream file(path);
++    T result;
++
++    file >> result;
++    return file.fail() ? def : result;
++}
++
++bool supportsTorchStrengthControlExt() {
++    return true;
++}
++
++bool supportsSetTorchModeExt() {
++    return false;
++}
++
++int32_t getTorchDefaultStrengthLevelExt() {
++    // The stock default (75) is 59% after capping the maximum at 255.
++    return 59;
++}
++
++int32_t getTorchMaxStrengthLevelExt() {
++    // The hardware permits more, but 255 is a conservative thermal limit.
++    return 255;
++}
++
++int32_t getTorchStrengthLevelExt() {
++    return get(kTorchLedPaths[0] + "/" + TORCH_BRIGHTNESS, 0);
++}
++
++void setTorchStrengthLevelExt(int32_t torchStrength, bool enabled) {
++    set(TOGGLE_SWITCH, 0);
++    for (auto& path : kTorchLedPaths) {
++        set(path + "/" + TORCH_BRIGHTNESS, torchStrength);
++    }
++    if (enabled) {
++        set(TOGGLE_SWITCH, 255);
++    }
++}
++
++void setTorchModeExt(bool enabled) {
++    const int32_t strength = getTorchDefaultStrengthLevelExt();
++    setTorchStrengthLevelExt(enabled ? strength : 0, enabled);
++}
+diff --git a/device.mk b/device.mk
+--- a/device.mk
++++ b/device.mk
+@@ -21,6 +21,9 @@ PRODUCT_COPY_FILES += \
+     $(LOCAL_PATH)/configs/audio/mixer_paths_overlay_static.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_overlay_static.xml \
+     $(LOCAL_PATH)/configs/audio/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml
+ 
++# Camera
++$(call soong_config_set,libcameraservice,ext_lib,//$(LOCAL_PATH):libcameraservice_extension.sweet)
++
+ # Display
+ PRODUCT_COPY_FILES += \
+     $(LOCAL_PATH)/configs/display/qdcm_calib_data_xiaomi_k6_38_0c_0a_fhd_dsc_video_dsi_panel.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_xiaomi_k6_38_0c_0a_fhd_dsc_video_dsi_panel.xml \
+-- 
+2.53.0

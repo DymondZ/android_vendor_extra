@@ -1,0 +1,29 @@
+From b2eebdb000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: DymondZ <gh3ttokill4@gmail.com>
+Date: Fri, 19 Jun 2026 22:33:00 +0200
+Subject: [PATCH 5/5] sweet: overlay: Define OEM fast-charge sysfs node
+
+Allow SystemUI to distinguish Xiaomi fast charging through the BMS node.
+---
+ .../frameworks/base/core/res/res/values/config.xml | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+ create mode 100644 overlay-lineage/frameworks/base/core/res/res/values/config.xml
+
+diff --git a/overlay-lineage/frameworks/base/core/res/res/values/config.xml b/overlay-lineage/frameworks/base/core/res/res/values/config.xml
+new file mode 100644
+--- /dev/null
++++ b/overlay-lineage/frameworks/base/core/res/res/values/config.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: 2024 The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <!-- Each entry is a sysfs path, delimiter, and active value. -->
++    <string-array name="config_oemFastChargerStatusPaths" translatable="false">
++        <item>/sys/class/power_supply/bms/fastcharge_mode;1</item>
++    </string-array>
++</resources>
+-- 
+2.53.0
