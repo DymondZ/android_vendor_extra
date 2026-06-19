@@ -16,7 +16,7 @@ fi
 SF_USER="dymondz"
 SF_HOST="frs.sourceforge.net"
 SF_PROJECT_ROOT="/home/frs/project/dymondz"
-JOBS=8
+JOBS=6
 
 convertsecs() {
     ((h=${1}/3600))
