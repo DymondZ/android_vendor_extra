@@ -1,22 +1,25 @@
-From 3efa67b296ce96e1e73133c6ba60d1e24bbc9c7e Mon Sep 17 00:00:00 2001
+From f6947eb05d1e61e9210a9c1b85fd60d6cecfef55 Mon Sep 17 00:00:00 2001
 From: basamaryan <basam.aryan@gmail.com>
 Date: Sat, 23 Sep 2023 01:08:14 +0200
-Subject: [PATCH] ARM64: configs: sweet: Enable ln8000 charger
+Subject: [PATCH 6/6] ARM64: configs: sweet: Enable ln8000 charger
 
 Change-Id: Ife8f8de8c4915dc243e3eab7edf16eaf398a03ed
 ---
- arch/arm64/configs/vendor/sweet.config | 1 +
+ arch/arm64/configs/sweet_defconfig | 1 +
  1 file changed, 1 insertion(+)
 
-diff --git a/arch/arm64/configs/vendor/sweet.config b/arch/arm64/configs/vendor/sweet.config
-index c3f3242ac621..285ae3cfc2ca 100644
---- a/arch/arm64/configs/vendor/sweet.config
-+++ b/arch/arm64/configs/vendor/sweet.config
-@@ -52,6 +52,7 @@ CONFIG_NFC_NQ_PN80T=y
- # Power
- CONFIG_BATT_VERIFY_BY_DS28E16=y
+diff --git a/arch/arm64/configs/sweet_defconfig b/arch/arm64/configs/sweet_defconfig
+index 7b64c22434cf..df61afece2e4 100644
+--- a/arch/arm64/configs/sweet_defconfig
++++ b/arch/arm64/configs/sweet_defconfig
+@@ -2740,6 +2740,7 @@ CONFIG_ONEWIRE_GPIO=y
+ # TI Technologies, Inc. Charger support
+ #
  CONFIG_BQ2597X_CHARGE_PUMP=y
 +CONFIG_CHARGER_LN8000=y
  CONFIG_K6_CHARGE=y
- CONFIG_ONEWIRE_GPIO=y
- # CONFIG_SMB1355_SLAVE_CHARGER is not set
+ CONFIG_HWMON=y
+ # CONFIG_HWMON_VID is not set
+-- 
+2.53.0
+

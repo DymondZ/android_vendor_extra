@@ -1,0 +1,26 @@
+From e558781c66365fe4616b50a8a76be3b176be24ea Mon Sep 17 00:00:00 2001
+From: DymondZ <gh3ttokill4@gmail.com>
+Date: Fri, 19 Jun 2026 22:08:52 +0200
+Subject: [PATCH] sweet: Build PixelOS kernel defconfig
+
+The PixelOS kernel uses the monolithic sweet_defconfig instead of the Lineage vendor base plus sweet config fragment.
+---
+ BoardConfig.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/BoardConfig.mk b/BoardConfig.mk
+index fab23ae..724b6b8 100644
+--- a/BoardConfig.mk
++++ b/BoardConfig.mk
+@@ -19,7 +19,7 @@ TARGET_PROVIDES_AUDIO_EXTNS := true
+ DEVICE_MANIFEST_FILE += $(DEVICE_PATH)/configs/hidl/manifest.xml
+ 
+ # Kernel
+-TARGET_KERNEL_CONFIG += vendor/sweet.config
++TARGET_KERNEL_CONFIG := sweet_defconfig
+ 
+ # Partitions
+ BOARD_BOOTIMAGE_PARTITION_SIZE := 134217728
+-- 
+2.53.0
+

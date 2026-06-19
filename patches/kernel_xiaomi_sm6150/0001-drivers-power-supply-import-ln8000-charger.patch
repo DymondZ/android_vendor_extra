@@ -1,7 +1,7 @@
-From 22aeb967bfff7d7dfaaa0904b9ccf7b0af335757 Mon Sep 17 00:00:00 2001
+From be7fc886856b7ba7cf38e78f50c034bc7c6ea4b9 Mon Sep 17 00:00:00 2001
 From: basamaryan <basam.aryan@gmail.com>
 Date: Sat, 23 Sep 2023 01:04:08 +0200
-Subject: [PATCH] drivers: power: supply: Import ln8000_charger
+Subject: [PATCH 1/6] drivers: power: supply: Import ln8000_charger
 
 * from branch: sweet_k6a-r-oss
 
@@ -16,13 +16,13 @@ Change-Id: If6a5f92508a7429b430e77da3b056de9867fd2e4
  create mode 100644 drivers/power/supply/ti/ln8000_charger.h
 
 diff --git a/drivers/power/supply/ti/Kconfig b/drivers/power/supply/ti/Kconfig
-index 48761c6e067e..5f5c15e1e308 100644
+index 8dbbc1f7bdcc..11b97a667428 100644
 --- a/drivers/power/supply/ti/Kconfig
 +++ b/drivers/power/supply/ti/Kconfig
-@@ -10,4 +10,11 @@ config BQ2597X_CHARGE_PUMP
- 	  with very high efficiency.
-
-
+@@ -16,4 +16,11 @@ config K6_CHARGE
+ 	help
+ 		K6 special modify.
+ 
 +config CHARGER_LN8000
 +	tristate "LionSemi LN8000 Battery Charger"
 +	depends on I2C
@@ -32,18 +32,15 @@ index 48761c6e067e..5f5c15e1e308 100644
 +
  endmenu
 diff --git a/drivers/power/supply/ti/Makefile b/drivers/power/supply/ti/Makefile
-index a911e6a00da0..ced8e8be9547 100644
+index f700acad9d47..7c3b6e710ec3 100644
 --- a/drivers/power/supply/ti/Makefile
 +++ b/drivers/power/supply/ti/Makefile
-@@ -1,4 +1,5 @@
+@@ -1 +1,2 @@
  obj-$(CONFIG_BQ2597X_CHARGE_PUMP)	+= bq2597x_charger.o pd_policy_manager.o cp_qc30.o
-+obj-$(CONFIG_CHARGER_LN8000)    += ln8000_charger.o pd_policy_manager.o cp_qc30.o
-
- CFLAGS_REMOVE_bq2597x_charger.o += -mgeneral-regs-only
- CFLAGS_bq2597x_charger.o += -mno-implicit-float
++obj-$(CONFIG_CHARGER_LN8000)		+= ln8000_charger.o pd_policy_manager.o cp_qc30.o
 diff --git a/drivers/power/supply/ti/ln8000_charger.c b/drivers/power/supply/ti/ln8000_charger.c
 new file mode 100644
-index 000000000000..913b11502a83
+index 000000000000..d062c79001d4
 --- /dev/null
 +++ b/drivers/power/supply/ti/ln8000_charger.c
 @@ -0,0 +1,1761 @@
@@ -1810,7 +1807,7 @@ index 000000000000..913b11502a83
 +MODULE_VERSION("0.3.0");
 diff --git a/drivers/power/supply/ti/ln8000_charger.h b/drivers/power/supply/ti/ln8000_charger.h
 new file mode 100644
-index 000000000000..94c3c980c181
+index 000000000000..678e74e8b86d
 --- /dev/null
 +++ b/drivers/power/supply/ti/ln8000_charger.h
 @@ -0,0 +1,339 @@
@@ -2153,3 +2150,6 @@ index 000000000000..94c3c980c181
 +};
 +
 +#endif  /* __LN8000_CHARGER_H__ */
+-- 
+2.53.0
+

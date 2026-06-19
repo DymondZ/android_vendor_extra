@@ -1,7 +1,7 @@
-From 218bb0d3e88314fc569c609952f190b94344cbc5 Mon Sep 17 00:00:00 2001
+From e80997a429be473b1d2a6189a429e4eac10de57e Mon Sep 17 00:00:00 2001
 From: basamaryan <basam.aryan@gmail.com>
 Date: Sat, 23 Sep 2023 00:12:01 +0200
-Subject: [PATCH] ARM64: dts: qcom: xiaomi: sweet: Add ln8000_charger
+Subject: [PATCH 2/6] ARM64: dts: qcom: xiaomi: sweet: Add ln8000_charger
 
 * from branch: nabu-r-oss
 
@@ -61,3 +61,6 @@ index 4f9b0f6a9635..4273fbd573ce 100755
  	aw8624_haptic@5A {
  		compatible = "awinic,aw8624_haptic";
  		reg = <0x5A>;
+-- 
+2.53.0
+
