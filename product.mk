@@ -14,7 +14,9 @@ endif
 
 # OTA
 PRODUCT_PACKAGES += \
-    UpdaterOverlay
+    UpdaterOverlay \
+# Dimmer    
+    Dimmer
 
 ifeq ($(WITH_GMS),true)
 # Overlay
