@@ -1,0 +1,227 @@
+From 9280b75ec4facb131df9cbd2286ad718c03daf41 Mon Sep 17 00:00:00 2001
+From: Dhina17 <dhinalogu@gmail.com>
+Date: Sun, 26 May 2024 15:29:14 +0530
+Subject: [PATCH 3/3] camera: Add extension to control torch strength
+
+Some devices support variable torch brightness through sysfs even though
+their legacy HIDL camera HAL does not expose the corresponding API.
+
+Backport the PixelOS extension hook and include the later range checking,
+state tracking, and explicit enabled-state fixes.
+
+Change-Id: Ib154aa4a1e6137a6b8ecab9245905f72b951db16
+---
+ services/camera/libcameraservice/Android.bp   | 16 +++++
+ .../common/CameraProviderExtension.cpp        | 36 ++++++++++++
+ .../common/CameraProviderExtension.h          | 23 ++++++++
+ .../common/CameraProviderManager.cpp          | 45 ++++++++++++++--
+ 4 files changed, 112 insertions(+), 8 deletions(-)
+ create mode 100644 services/camera/libcameraservice/common/CameraProviderExtension.cpp
+ create mode 100644 services/camera/libcameraservice/common/CameraProviderExtension.h
+
+diff --git a/services/camera/libcameraservice/Android.bp b/services/camera/libcameraservice/Android.bp
+--- a/services/camera/libcameraservice/Android.bp
++++ b/services/camera/libcameraservice/Android.bp
+@@ -139,6 +139,7 @@ cc_library {
+         "common/CameraDeviceBase.cpp",
+         "common/CameraOfflineSessionBase.cpp",
+         "common/CameraProviderManager.cpp",
++        "common/CameraProviderExtension.cpp",
+         "common/FrameProcessorBase.cpp",
+         "common/hidl/HidlProviderInfo.cpp",
+         "common/aidl/AidlProviderInfo.cpp",
+@@ -237,7 +238,14 @@ cc_library {
+         "-Wno-ignored-qualifiers",
+     ] + select(soong_config_variable("camera", "package_name"), {
+         any @ flag_val: ["-DCAMERA_PACKAGE_NAME=\"" + flag_val + "\""],
+         default: [],
++    }) + select(soong_config_variable("libcameraservice", "ext_lib"), {
++        any @ flag_val: ["-DTARGET_PROVIDES_CAMERA_PROVIDER_EXT_LIB"],
++        default: [],
++    }),
++    whole_static_libs: select(soong_config_variable("libcameraservice", "ext_lib"), {
++        any @ flag_val: [flag_val],
++        default: ["libcameraservice_ext_lib"],
+     }),
+ }
+ 
+@@ -302,3 +308,11 @@ cc_library_static {
+         "-Wno-ignored-qualifiers",
+     ],
+ }
++
++cc_library_static {
++    name: "libcameraservice_ext_lib",
++    srcs: [
++        "common/CameraProviderExtension.cpp",
++    ],
++    export_include_dirs: ["."],
++}
+diff --git a/services/camera/libcameraservice/common/CameraProviderExtension.cpp b/services/camera/libcameraservice/common/CameraProviderExtension.cpp
+new file mode 100644
+--- /dev/null
++++ b/services/camera/libcameraservice/common/CameraProviderExtension.cpp
+@@ -0,0 +1,36 @@
++/*
++ * Copyright 2024 The LibreMobileOS Foundation
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include "common/CameraProviderExtension.h"
++
++__attribute__((weak)) bool supportsTorchStrengthControlExt() {
++    return false;
++}
++
++__attribute__((weak)) int32_t getTorchDefaultStrengthLevelExt() {
++    return 1;
++}
++
++__attribute__((weak)) int32_t getTorchMaxStrengthLevelExt() {
++    return 1;
++}
++
++__attribute__((weak)) int32_t getTorchStrengthLevelExt() {
++    return 0;
++}
++
++__attribute__((weak)) void setTorchStrengthLevelExt(
++        __unused int32_t torchStrength, __unused bool enabled) {}
+diff --git a/services/camera/libcameraservice/common/CameraProviderExtension.h b/services/camera/libcameraservice/common/CameraProviderExtension.h
+new file mode 100644
+--- /dev/null
++++ b/services/camera/libcameraservice/common/CameraProviderExtension.h
+@@ -0,0 +1,23 @@
++/*
++ * Copyright 2024 The LibreMobileOS Foundation
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include <stdint.h>
++
++extern bool supportsTorchStrengthControlExt();
++extern int32_t getTorchDefaultStrengthLevelExt();
++extern int32_t getTorchMaxStrengthLevelExt();
++extern int32_t getTorchStrengthLevelExt();
++extern void setTorchStrengthLevelExt(int32_t torchStrength, bool enabled);
+diff --git a/services/camera/libcameraservice/common/CameraProviderManager.cpp b/services/camera/libcameraservice/common/CameraProviderManager.cpp
+--- a/services/camera/libcameraservice/common/CameraProviderManager.cpp
++++ b/services/camera/libcameraservice/common/CameraProviderManager.cpp
+@@ -55,6 +55,8 @@
+ #include "device3/ZoomRatioMapper.h"
+ #include "utils/Utils.h"
+ 
++#include "common/CameraProviderExtension.h"
++
+ namespace android {
+ 
+ using namespace ::android::hardware::camera;
+@@ -554,7 +556,12 @@ status_t CameraProviderManager::getTorchStrengthLevel(const std::string &id,
+     auto deviceInfo = findDeviceInfoLocked(id);
+     if (deviceInfo == nullptr) return NAME_NOT_FOUND;
+ 
+-    return deviceInfo->getTorchStrengthLevel(torchStrength);
++    if (deviceInfo->hasFlashUnit() && supportsTorchStrengthControlExt()) {
++        *torchStrength = getTorchStrengthLevelExt();
++        return OK;
++    } else {
++        return deviceInfo->getTorchStrengthLevel(torchStrength);
++    }
+ }
+ 
+ status_t CameraProviderManager::turnOnTorchWithStrengthLevel(const std::string &id,
+@@ -564,7 +571,19 @@ status_t CameraProviderManager::turnOnTorchWithStrengthLevel(const std::string &
+     auto deviceInfo = findDeviceInfoLocked(id);
+     if (deviceInfo == nullptr) return NAME_NOT_FOUND;
+ 
+-    return deviceInfo->turnOnTorchWithStrengthLevel(torchStrength);
++    if (deviceInfo->hasFlashUnit() && supportsTorchStrengthControlExt()) {
++        if (torchStrength <= 0 || torchStrength > getTorchMaxStrengthLevelExt()) {
++            ALOGE("%s: Invalid torch strength level %d", __FUNCTION__, torchStrength);
++            return BAD_VALUE;
++        }
++
++        deviceInfo->setTorchMode(true);
++        setTorchStrengthLevelExt(torchStrength, true);
++        deviceInfo->mTorchStrengthLevel = torchStrength;
++        return OK;
++    } else {
++        return deviceInfo->turnOnTorchWithStrengthLevel(torchStrength);
++    }
+ }
+ 
+ bool CameraProviderManager::shouldSkipTorchStrengthUpdate(const std::string &id,
+@@ -588,7 +607,11 @@ int32_t CameraProviderManager::getTorchDefaultStrengthLevel(const std::string &i
+     auto deviceInfo = findDeviceInfoLocked(id);
+     if (deviceInfo == nullptr) return NAME_NOT_FOUND;
+ 
+-    return deviceInfo->mTorchDefaultStrengthLevel;
++    if (deviceInfo->hasFlashUnit() && supportsTorchStrengthControlExt()) {
++        return getTorchDefaultStrengthLevelExt();
++    } else {
++        return deviceInfo->mTorchDefaultStrengthLevel;
++    }
+ }
+ 
+ bool CameraProviderManager::supportSetTorchMode(const std::string &id) const {
+@@ -652,7 +675,13 @@ status_t CameraProviderManager::setTorchMode(const std::string &id, bool enabled
+     }
+     saveRef(DeviceMode::TORCH, deviceInfo->mId, halCameraProvider);
+ 
+-    return deviceInfo->setTorchMode(enabled);
++    res = deviceInfo->setTorchMode(enabled);
++    if (deviceInfo->hasFlashUnit() && supportsTorchStrengthControlExt()) {
++        int32_t defaultLevel = getTorchDefaultStrengthLevelExt();
++        setTorchStrengthLevelExt(defaultLevel, enabled);
++        deviceInfo->mTorchStrengthLevel = defaultLevel;
++    }
++    return res;
+ }
+ 
+ status_t CameraProviderManager::setUpVendorTags() {
+@@ -1716,8 +1753,8 @@ status_t CameraProviderManager::ProviderInfo::DeviceInfo3::fixupTorchStrengthTag
+     status_t res = OK;
+     auto& c = mCameraCharacteristics;
+     auto flashInfoStrengthDefaultLevelEntry = c.find(ANDROID_FLASH_INFO_STRENGTH_DEFAULT_LEVEL);
+-    if (flashInfoStrengthDefaultLevelEntry.count == 0) {
+-        int32_t flashInfoStrengthDefaultLevel = 1;
++    if (flashInfoStrengthDefaultLevelEntry.count == 0 || supportsTorchStrengthControlExt()) {
++        int32_t flashInfoStrengthDefaultLevel = getTorchDefaultStrengthLevelExt();
+         res = c.update(ANDROID_FLASH_INFO_STRENGTH_DEFAULT_LEVEL,
+                 &flashInfoStrengthDefaultLevel, 1);
+         if (res != OK) {
+@@ -1727,8 +1764,8 @@ status_t CameraProviderManager::ProviderInfo::DeviceInfo3::fixupTorchStrengthTag
+         }
+     }
+     auto flashInfoStrengthMaximumLevelEntry = c.find(ANDROID_FLASH_INFO_STRENGTH_MAXIMUM_LEVEL);
+-    if (flashInfoStrengthMaximumLevelEntry.count == 0) {
+-        int32_t flashInfoStrengthMaximumLevel = 1;
++    if (flashInfoStrengthMaximumLevelEntry.count == 0 || supportsTorchStrengthControlExt()) {
++        int32_t flashInfoStrengthMaximumLevel = getTorchMaxStrengthLevelExt();
+         res = c.update(ANDROID_FLASH_INFO_STRENGTH_MAXIMUM_LEVEL,
+                 &flashInfoStrengthMaximumLevel, 1);
+         if (res != OK) {
+-- 
+2.53.0
