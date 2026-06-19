@@ -1,0 +1,714 @@
+From dd0fee7781c6b0ddbfbba749631d00b770374d83 Mon Sep 17 00:00:00 2001
+From: Adithya R <gh0strider.2k18.reborn@gmail.com>
+Date: Fri, 19 Jun 2026 21:29:44 +0200
+Subject: [PATCH 4/5] sm6150-common: Add per-app thermal profiles
+
+Port only the thermal profile UI and service to the existing XiaomiParts implementation. Keep the current app theme, boot flow and build configuration, and use the existing thermal_message/sconfig kernel interface.
+---
+ parts/Android.bp                              |   1 +
+ parts/AndroidManifest.xml                     |  24 ++
+ parts/res/drawable/ic_thermal_settings.xml    |  11 +
+ parts/res/layout/thermal_layout.xml           |  12 +
+ parts/res/layout/thermal_list_item.xml        |  44 +++
+ parts/res/values/strings.xml                  |  13 +
+ .../settings/BootCompletedReceiver.java       |   2 +
+ .../settings/thermal/ThermalService.java      |  99 +++++++
+ .../thermal/ThermalSettingsActivity.java      |  26 ++
+ .../thermal/ThermalSettingsFragment.java      | 266 ++++++++++++++++++
+ .../settings/thermal/ThermalUtils.java        |  87 ++++++
+ sepolicy/vendor/system_app.te                 |   1 +
+ 12 files changed, 586 insertions(+)
+ create mode 100644 parts/res/drawable/ic_thermal_settings.xml
+ create mode 100644 parts/res/layout/thermal_layout.xml
+ create mode 100644 parts/res/layout/thermal_list_item.xml
+ create mode 100644 parts/src/org/lineageos/settings/thermal/ThermalService.java
+ create mode 100644 parts/src/org/lineageos/settings/thermal/ThermalSettingsActivity.java
+ create mode 100644 parts/src/org/lineageos/settings/thermal/ThermalSettingsFragment.java
+ create mode 100644 parts/src/org/lineageos/settings/thermal/ThermalUtils.java
+
+diff --git a/parts/Android.bp b/parts/Android.bp
+index 9892c9a..5cb12ab 100644
+--- a/parts/Android.bp
++++ b/parts/Android.bp
+@@ -14,6 +14,7 @@ android_app {
+     privileged: true,
+ 
+     static_libs: [
++        "androidx.recyclerview_recyclerview",
+         "org.lineageos.settings.resources",
+     ],
+ 
+diff --git a/parts/AndroidManifest.xml b/parts/AndroidManifest.xml
+index 14efe4c..6498bc9 100644
+--- a/parts/AndroidManifest.xml
++++ b/parts/AndroidManifest.xml
+@@ -54,5 +54,29 @@
+             </intent-filter>
+         </activity>
+ 
++        <activity
++            android:name=".thermal.ThermalSettingsActivity"
++            android:exported="false"
++            android:icon="@drawable/ic_thermal_settings"
++            android:label="@string/thermal_title"
++            android:theme="@style/Theme.SubSettingsBase">
++            <intent-filter>
++                <action android:name="com.android.settings.action.IA_SETTINGS" />
++            </intent-filter>
++            <meta-data
++                android:name="com.android.settings.category"
++                android:value="com.android.settings.category.ia.system" />
++            <meta-data
++                android:name="com.android.settings.summary"
++                android:resource="@string/thermal_summary" />
++            <meta-data
++                android:name="com.android.settings.icon"
++                android:resource="@drawable/ic_thermal_settings" />
++        </activity>
++
++        <service
++            android:name=".thermal.ThermalService"
++            android:exported="false" />
++
+     </application>
+ </manifest>
+diff --git a/parts/res/drawable/ic_thermal_settings.xml b/parts/res/drawable/ic_thermal_settings.xml
+new file mode 100644
+index 0000000..1fa0fb7
+--- /dev/null
++++ b/parts/res/drawable/ic_thermal_settings.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="24"
++    android:viewportHeight="24">
++    <path
++        android:fillColor="?android:attr/colorControlNormal"
++        android:pathData="M15,13V5a3,3 0,0 0,-6 0v8.17A5,5 0,1 0,6.76 17.35 5,5 0,0 0,15 13zM12,3a2,2 0,0 1,2 2v8.58l0.5,0.3A4,4 0,1 1,8 17a3.98,3.98 0,0 1,1.5 -3.12l0.5,-0.3V5a2,2 0,0 1,2 -2zM11,6h2v8.27A3,3 0,1 1,11 14.27z" />
++</vector>
+diff --git a/parts/res/layout/thermal_layout.xml b/parts/res/layout/thermal_layout.xml
+new file mode 100644
+index 0000000..d0c5435
+--- /dev/null
++++ b/parts/res/layout/thermal_layout.xml
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2020 The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<androidx.recyclerview.widget.RecyclerView
++    xmlns:android="http://schemas.android.com/apk/res/android"
++    android:id="@+id/thermal_rv_view"
++    android:layout_width="match_parent"
++    android:layout_height="match_parent"
++    android:clipToPadding="false"
++    android:scrollbars="vertical" />
+diff --git a/parts/res/layout/thermal_list_item.xml b/parts/res/layout/thermal_list_item.xml
+new file mode 100644
+index 0000000..9f777a3
+--- /dev/null
++++ b/parts/res/layout/thermal_list_item.xml
+@@ -0,0 +1,44 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2020 The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="match_parent"
++    android:layout_height="wrap_content"
++    android:minHeight="?android:attr/listPreferredItemHeight"
++    android:gravity="center_vertical"
++    android:paddingStart="?android:attr/listPreferredItemPaddingStart"
++    android:paddingTop="8dp"
++    android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
++    android:paddingBottom="8dp">
++
++    <ImageView
++        android:id="@+id/app_icon"
++        android:layout_width="@android:dimen/app_icon_size"
++        android:layout_height="@android:dimen/app_icon_size"
++        android:layout_marginEnd="12dp"
++        android:contentDescription="@null"
++        android:scaleType="centerInside" />
++
++    <LinearLayout
++        android:layout_width="0dp"
++        android:layout_height="wrap_content"
++        android:layout_weight="1"
++        android:orientation="vertical">
++
++        <TextView
++            android:id="@+id/app_name"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:ellipsize="end"
++            android:maxLines="1"
++            android:textAppearance="?android:attr/textAppearanceListItem"
++            android:textColor="?android:attr/textColorPrimary" />
++
++        <Spinner
++            android:id="@+id/app_mode"
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content" />
++    </LinearLayout>
++</LinearLayout>
+diff --git a/parts/res/values/strings.xml b/parts/res/values/strings.xml
+index 7d53121..c17d56e 100644
+--- a/parts/res/values/strings.xml
++++ b/parts/res/values/strings.xml
+@@ -18,4 +18,17 @@
+     <!-- Ambient settings -->
+     <string name="doze_brightness_title">Always on brightness</string>
+     <string name="doze_brightness_summary">%s mode is enabled</string>
++
++    <!-- Thermal profiles -->
++    <string name="thermal_title">Thermal profiles</string>
++    <string name="thermal_summary">Per-app thermal profile configuration</string>
++    <string name="thermal_default">Default</string>
++    <string name="thermal_benchmark">Benchmark</string>
++    <string name="thermal_browser">Browser</string>
++    <string name="thermal_camera">Camera</string>
++    <string name="thermal_dialer">Dialer</string>
++    <string name="thermal_gaming">Gaming</string>
++    <string name="thermal_navigation">Navigation</string>
++    <string name="thermal_streaming">Streaming</string>
++    <string name="thermal_video">Video</string>
+ </resources>
+diff --git a/parts/src/org/lineageos/settings/BootCompletedReceiver.java b/parts/src/org/lineageos/settings/BootCompletedReceiver.java
+index 08b9f1d..4e29003 100644
+--- a/parts/src/org/lineageos/settings/BootCompletedReceiver.java
++++ b/parts/src/org/lineageos/settings/BootCompletedReceiver.java
+@@ -23,6 +23,7 @@ import android.content.Intent;
+ import android.util.Log;
+ 
+ import org.lineageos.settings.doze.DozeUtils;
++import org.lineageos.settings.thermal.ThermalUtils;
+ 
+ public class BootCompletedReceiver extends BroadcastReceiver {
+     private static final boolean DEBUG = false;
+@@ -33,5 +34,6 @@ public class BootCompletedReceiver extends BroadcastReceiver {
+         if (DEBUG)
+             Log.d(TAG, "Received boot completed intent");
+         DozeUtils.onBootCompleted(context);
++        ThermalUtils.startService(context);
+     }
+ }
+diff --git a/parts/src/org/lineageos/settings/thermal/ThermalService.java b/parts/src/org/lineageos/settings/thermal/ThermalService.java
+new file mode 100644
+index 0000000..8ed32c6
+--- /dev/null
++++ b/parts/src/org/lineageos/settings/thermal/ThermalService.java
+@@ -0,0 +1,99 @@
++/*
++ * Copyright (C) 2020 The LineageOS Project
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package org.lineageos.settings.thermal;
++
++import android.app.ActivityTaskManager;
++import android.app.Service;
++import android.app.TaskStackListener;
++import android.content.BroadcastReceiver;
++import android.content.ComponentName;
++import android.content.Context;
++import android.content.Intent;
++import android.content.IntentFilter;
++import android.os.IBinder;
++import android.os.RemoteException;
++
++public class ThermalService extends Service {
++  private boolean mScreenOn = true;
++  private String mCurrentApp = "";
++  private ThermalUtils mThermalUtils;
++
++  private final BroadcastReceiver mScreenReceiver =
++      new BroadcastReceiver() {
++        @Override
++        public void onReceive(Context context, Intent intent) {
++          mScreenOn = Intent.ACTION_SCREEN_ON.equals(intent.getAction());
++          applyThermalProfile();
++        }
++      };
++
++  private final TaskStackListener mTaskListener =
++      new TaskStackListener() {
++        @Override
++        public void onTaskStackChanged() {
++          try {
++            ActivityTaskManager.RootTaskInfo task =
++                ActivityTaskManager.getService().getFocusedRootTaskInfo();
++            if (task != null && task.topActivity != null) {
++              ComponentName component = task.topActivity;
++              String foregroundApp = component.getPackageName();
++              if (!foregroundApp.equals(mCurrentApp)) {
++                mCurrentApp = foregroundApp;
++                applyThermalProfile();
++              }
++            }
++          } catch (RemoteException ignored) {
++          }
++        }
++      };
++
++  @Override
++  public void onCreate() {
++    super.onCreate();
++    mThermalUtils = new ThermalUtils(this);
++    mThermalUtils.setDefaultThermalProfile();
++
++    try {
++      ActivityTaskManager.getService().registerTaskStackListener(mTaskListener);
++    } catch (RemoteException ignored) {
++    }
++
++    IntentFilter filter = new IntentFilter();
++    filter.addAction(Intent.ACTION_SCREEN_OFF);
++    filter.addAction(Intent.ACTION_SCREEN_ON);
++    registerReceiver(mScreenReceiver, filter);
++  }
++
++  @Override
++  public int onStartCommand(Intent intent, int flags, int startId) {
++    return START_STICKY;
++  }
++
++  @Override
++  public IBinder onBind(Intent intent) {
++    return null;
++  }
++
++  @Override
++  public void onDestroy() {
++    unregisterReceiver(mScreenReceiver);
++    try {
++      ActivityTaskManager.getService().unregisterTaskStackListener(mTaskListener);
++    } catch (RemoteException ignored) {
++    }
++    mThermalUtils.setDefaultThermalProfile();
++    super.onDestroy();
++  }
++
++  private void applyThermalProfile() {
++    if (mScreenOn) {
++      mThermalUtils.setThermalProfile(mCurrentApp);
++    } else {
++      mThermalUtils.setDefaultThermalProfile();
++    }
++  }
++}
+diff --git a/parts/src/org/lineageos/settings/thermal/ThermalSettingsActivity.java b/parts/src/org/lineageos/settings/thermal/ThermalSettingsActivity.java
+new file mode 100644
+index 0000000..5fa0dff
+--- /dev/null
++++ b/parts/src/org/lineageos/settings/thermal/ThermalSettingsActivity.java
+@@ -0,0 +1,26 @@
++/*
++ * Copyright (C) 2020-2022 The LineageOS Project
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package org.lineageos.settings.thermal;
++
++import android.os.Bundle;
++import com.android.settingslib.collapsingtoolbar.CollapsingToolbarBaseActivity;
++
++public class ThermalSettingsActivity extends CollapsingToolbarBaseActivity {
++  private static final String TAG_THERMAL = "thermal";
++
++  @Override
++  protected void onCreate(Bundle savedInstanceState) {
++    super.onCreate(savedInstanceState);
++    getFragmentManager()
++        .beginTransaction()
++        .replace(
++            com.android.settingslib.collapsingtoolbar.R.id.content_frame,
++            new ThermalSettingsFragment(),
++            TAG_THERMAL)
++        .commit();
++  }
++}
+diff --git a/parts/src/org/lineageos/settings/thermal/ThermalSettingsFragment.java b/parts/src/org/lineageos/settings/thermal/ThermalSettingsFragment.java
+new file mode 100644
+index 0000000..2ea1a72
+--- /dev/null
++++ b/parts/src/org/lineageos/settings/thermal/ThermalSettingsFragment.java
+@@ -0,0 +1,266 @@
++/*
++ * Copyright (C) 2020 The LineageOS Project
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package org.lineageos.settings.thermal;
++
++import android.app.Fragment;
++import android.content.Context;
++import android.content.Intent;
++import android.content.pm.PackageManager;
++import android.content.pm.ResolveInfo;
++import android.os.Bundle;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.view.ViewGroup;
++import android.widget.AdapterView;
++import android.widget.BaseAdapter;
++import android.widget.ImageView;
++import android.widget.Spinner;
++import android.widget.TextView;
++import androidx.annotation.NonNull;
++import androidx.recyclerview.widget.LinearLayoutManager;
++import androidx.recyclerview.widget.RecyclerView;
++import com.android.settingslib.applications.ApplicationsState;
++import java.util.ArrayList;
++import java.util.HashSet;
++import java.util.List;
++import java.util.Set;
++import org.lineageos.settings.R;
++
++public class ThermalSettingsFragment extends Fragment implements ApplicationsState.Callbacks {
++  private ApplicationsState mApplicationsState;
++  private ApplicationsState.Session mSession;
++  private ActivityFilter mActivityFilter;
++  private AppsAdapter mAppsAdapter;
++  private ThermalUtils mThermalUtils;
++
++  @Override
++  public void onCreate(Bundle savedInstanceState) {
++    super.onCreate(savedInstanceState);
++
++    mApplicationsState = ApplicationsState.getInstance(getActivity().getApplication());
++    mSession = mApplicationsState.newSession(this);
++    mActivityFilter = new ActivityFilter(getActivity().getPackageManager());
++    mAppsAdapter = new AppsAdapter();
++    mThermalUtils = new ThermalUtils(getActivity());
++  }
++
++  @Override
++  public View onCreateView(
++      LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
++    View view = inflater.inflate(R.layout.thermal_layout, container, false);
++    RecyclerView apps = view.findViewById(R.id.thermal_rv_view);
++    apps.setLayoutManager(new LinearLayoutManager(getActivity()));
++    apps.setAdapter(mAppsAdapter);
++    return view;
++  }
++
++  @Override
++  public void onResume() {
++    super.onResume();
++    getActivity().setTitle(R.string.thermal_title);
++    mSession.onResume();
++    rebuild();
++  }
++
++  @Override
++  public void onPause() {
++    mSession.onPause();
++    super.onPause();
++  }
++
++  @Override
++  public void onDestroy() {
++    mSession.onDestroy();
++    super.onDestroy();
++  }
++
++  @Override
++  public void onPackageListChanged() {
++    mActivityFilter.updateLauncherPackages();
++    rebuild();
++  }
++
++  @Override
++  public void onRebuildComplete(ArrayList<ApplicationsState.AppEntry> entries) {
++    if (entries != null) {
++      mAppsAdapter.setEntries(entries);
++    }
++  }
++
++  @Override
++  public void onLoadEntriesCompleted() {
++    rebuild();
++  }
++
++  @Override
++  public void onAllSizesComputed() {}
++
++  @Override
++  public void onLauncherInfoChanged() {}
++
++  @Override
++  public void onPackageIconChanged() {}
++
++  @Override
++  public void onPackageSizeChanged(String packageName) {}
++
++  @Override
++  public void onRunningStateChanged(boolean running) {}
++
++  private void rebuild() {
++    mSession.rebuild(mActivityFilter, ApplicationsState.ALPHA_COMPARATOR);
++  }
++
++  private final class AppsAdapter extends RecyclerView.Adapter<AppViewHolder>
++      implements AdapterView.OnItemSelectedListener {
++    private List<ApplicationsState.AppEntry> mEntries = new ArrayList<>();
++
++    @Override
++    public int getItemCount() {
++      return mEntries.size();
++    }
++
++    @NonNull
++    @Override
++    public AppViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
++      View view =
++          LayoutInflater.from(parent.getContext())
++              .inflate(R.layout.thermal_list_item, parent, false);
++      return new AppViewHolder(view);
++    }
++
++    @Override
++    public void onBindViewHolder(@NonNull AppViewHolder holder, int position) {
++      ApplicationsState.AppEntry entry = mEntries.get(position);
++      Context context = holder.itemView.getContext();
++
++      holder.mode.setAdapter(new ModeAdapter(context));
++      holder.mode.setOnItemSelectedListener(this);
++      holder.mode.setTag(entry);
++      holder.mode.setSelection(mThermalUtils.getStateForPackage(entry.info.packageName), false);
++
++      holder.title.setText(entry.label);
++      holder.title.setOnClickListener(view -> holder.mode.performClick());
++      mApplicationsState.ensureIcon(entry);
++      holder.icon.setImageDrawable(entry.icon);
++    }
++
++    @Override
++    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
++      ApplicationsState.AppEntry entry = (ApplicationsState.AppEntry) parent.getTag();
++      if (entry != null && mThermalUtils.getStateForPackage(entry.info.packageName) != position) {
++        mThermalUtils.writePackage(entry.info.packageName, position);
++      }
++    }
++
++    @Override
++    public void onNothingSelected(AdapterView<?> parent) {}
++
++    private void setEntries(List<ApplicationsState.AppEntry> entries) {
++      mEntries = entries;
++      notifyDataSetChanged();
++    }
++  }
++
++  private static final class AppViewHolder extends RecyclerView.ViewHolder {
++    private final TextView title;
++    private final Spinner mode;
++    private final ImageView icon;
++
++    private AppViewHolder(View view) {
++      super(view);
++      title = view.findViewById(R.id.app_name);
++      mode = view.findViewById(R.id.app_mode);
++      icon = view.findViewById(R.id.app_icon);
++    }
++  }
++
++  private static final class ModeAdapter extends BaseAdapter {
++    private static final int[] LABELS = {
++      R.string.thermal_default,
++      R.string.thermal_benchmark,
++      R.string.thermal_browser,
++      R.string.thermal_camera,
++      R.string.thermal_dialer,
++      R.string.thermal_gaming,
++      R.string.thermal_navigation,
++      R.string.thermal_streaming,
++      R.string.thermal_video
++    };
++
++    private final LayoutInflater mInflater;
++
++    private ModeAdapter(Context context) {
++      mInflater = LayoutInflater.from(context);
++    }
++
++    @Override
++    public int getCount() {
++      return LABELS.length;
++    }
++
++    @Override
++    public Object getItem(int position) {
++      return LABELS[position];
++    }
++
++    @Override
++    public long getItemId(int position) {
++      return position;
++    }
++
++    @Override
++    public View getView(int position, View convertView, ViewGroup parent) {
++      TextView view =
++          convertView == null
++              ? (TextView)
++                  mInflater.inflate(android.R.layout.simple_spinner_dropdown_item, parent, false)
++              : (TextView) convertView;
++      view.setText(LABELS[position]);
++      view.setTextSize(14f);
++      return view;
++    }
++
++    @Override
++    public View getDropDownView(int position, View convertView, ViewGroup parent) {
++      return getView(position, convertView, parent);
++    }
++  }
++
++  private static final class ActivityFilter implements ApplicationsState.AppFilter {
++    private final PackageManager mPackageManager;
++    private final Set<String> mLauncherPackages = new HashSet<>();
++
++    private ActivityFilter(PackageManager packageManager) {
++      mPackageManager = packageManager;
++      updateLauncherPackages();
++    }
++
++    private void updateLauncherPackages() {
++      Intent intent = new Intent(Intent.ACTION_MAIN);
++      intent.addCategory(Intent.CATEGORY_LAUNCHER);
++      List<ResolveInfo> activities = mPackageManager.queryIntentActivities(intent, 0);
++
++      synchronized (mLauncherPackages) {
++        mLauncherPackages.clear();
++        for (ResolveInfo activity : activities) {
++          mLauncherPackages.add(activity.activityInfo.packageName);
++        }
++      }
++    }
++
++    @Override
++    public void init() {}
++
++    @Override
++    public boolean filterApp(ApplicationsState.AppEntry entry) {
++      synchronized (mLauncherPackages) {
++        return entry.info.enabled && mLauncherPackages.contains(entry.info.packageName);
++      }
++    }
++  }
++}
+diff --git a/parts/src/org/lineageos/settings/thermal/ThermalUtils.java b/parts/src/org/lineageos/settings/thermal/ThermalUtils.java
+new file mode 100644
+index 0000000..56991d1
+--- /dev/null
++++ b/parts/src/org/lineageos/settings/thermal/ThermalUtils.java
+@@ -0,0 +1,87 @@
++/*
++ * Copyright (C) 2020 The LineageOS Project
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package org.lineageos.settings.thermal;
++
++import android.content.Context;
++import android.content.Intent;
++import android.content.SharedPreferences;
++import android.os.UserHandle;
++import androidx.preference.PreferenceManager;
++import org.lineageos.settings.utils.FileUtils;
++
++public final class ThermalUtils {
++  private static final String THERMAL_CONTROL = "thermal_control";
++  private static final String THERMAL_SCONFIG = "/sys/class/thermal/thermal_message/sconfig";
++
++  protected static final int STATE_DEFAULT = 0;
++
++  private static final String[] PROFILE_PREFIXES = {
++    "thermal.benchmark=", "thermal.browser=", "thermal.camera=",
++    "thermal.dialer=", "thermal.gaming=", "thermal.navigation=",
++    "thermal.streaming=", "thermal.video="
++  };
++
++  private static final String[] PROFILE_STATES = {"10", "11", "12", "8", "13", "19", "14", "21"};
++
++  private final SharedPreferences mSharedPrefs;
++
++  protected ThermalUtils(Context context) {
++    mSharedPrefs = PreferenceManager.getDefaultSharedPreferences(context);
++  }
++
++  public static void startService(Context context) {
++    context.startServiceAsUser(new Intent(context, ThermalService.class), UserHandle.CURRENT);
++  }
++
++  protected void writePackage(String packageName, int mode) {
++    String[] profiles = getProfiles();
++    for (int i = 0; i < profiles.length; i++) {
++      profiles[i] = profiles[i].replace(packageName + ",", "");
++    }
++
++    if (mode > STATE_DEFAULT && mode <= profiles.length) {
++      profiles[mode - 1] += packageName + ",";
++    }
++
++    mSharedPrefs.edit().putString(THERMAL_CONTROL, String.join(":", profiles)).apply();
++  }
++
++  protected int getStateForPackage(String packageName) {
++    String[] profiles = getProfiles();
++    for (int i = 0; i < profiles.length; i++) {
++      if (profiles[i].contains(packageName + ",")) {
++        return i + 1;
++      }
++    }
++    return STATE_DEFAULT;
++  }
++
++  protected void setDefaultThermalProfile() {
++    FileUtils.writeLine(THERMAL_SCONFIG, "0");
++  }
++
++  protected void setThermalProfile(String packageName) {
++    int profile = getStateForPackage(packageName);
++    FileUtils.writeLine(
++        THERMAL_SCONFIG, profile == STATE_DEFAULT ? "0" : PROFILE_STATES[profile - 1]);
++  }
++
++  private String[] getProfiles() {
++    String value = mSharedPrefs.getString(THERMAL_CONTROL, null);
++    if (value == null || value.isEmpty()) {
++      value = String.join(":", PROFILE_PREFIXES);
++      mSharedPrefs.edit().putString(THERMAL_CONTROL, value).apply();
++    }
++
++    String[] profiles = value.split(":", -1);
++    if (profiles.length != PROFILE_PREFIXES.length) {
++      profiles = PROFILE_PREFIXES.clone();
++      mSharedPrefs.edit().putString(THERMAL_CONTROL, String.join(":", profiles)).apply();
++    }
++    return profiles;
++  }
++}
+diff --git a/sepolicy/vendor/system_app.te b/sepolicy/vendor/system_app.te
+index 909427a..902c41b 100644
+--- a/sepolicy/vendor/system_app.te
++++ b/sepolicy/vendor/system_app.te
+@@ -5,6 +5,7 @@ allow system_app hal_motor_hwservice_xiaomi:hwservice_manager find;
+ binder_call(system_app, hal_motor)
+ 
+ allow system_app sysfs_doze:file rw_file_perms;
++allow system_app sysfs_thermal:file rw_file_perms;
+ 
+ allow system_app { motor_device vendor_sysfs_graphics sysfs_leds }:dir search;
+ allow system_app { cgroup vendor_sysfs_graphics }:file rw_file_perms;

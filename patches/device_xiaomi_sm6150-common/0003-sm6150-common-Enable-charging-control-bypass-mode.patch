@@ -1,0 +1,36 @@
+From 5afe97298b3d3227458e57e7cdece9a3e951a7e5 Mon Sep 17 00:00:00 2001
+From: Michael Bestas <mkbestas@lineageos.org>
+Date: Fri, 19 Jun 2026 21:25:41 +0200
+Subject: [PATCH 3/5] sm6150-common: Enable charging control bypass mode
+
+---
+ rootdir/etc/ueventd.rc | 2 +-
+ sm6150.mk              | 5 -----
+ 2 files changed, 1 insertion(+), 6 deletions(-)
+
+diff --git a/rootdir/etc/ueventd.rc b/rootdir/etc/ueventd.rc
+index ed8564e..62ea417 100644
+--- a/rootdir/etc/ueventd.rc
++++ b/rootdir/etc/ueventd.rc
+@@ -184,4 +184,4 @@ firmware_directories /vendor/firmware_mnt/image/
+ /sys/devices/soc0        serial_number   0000    root      root
+ 
+ # Charger
+-/sys/class/power_supply/battery input_suspend   0660    system  system
++/sys/class/power_supply/battery charging_enabled   0660    system  system
+diff --git a/sm6150.mk b/sm6150.mk
+index 903c7da..8cc24a6 100644
+--- a/sm6150.mk
++++ b/sm6150.mk
+@@ -208,11 +208,6 @@ PRODUCT_SET_DEBUGFS_RESTRICTIONS := true
+ PRODUCT_PACKAGES += \
+     vendor.lineage.health-service.default
+ 
+-$(call soong_config_set,lineage_health,charging_control_charging_disabled,1)
+-$(call soong_config_set,lineage_health,charging_control_charging_enabled,0)
+-$(call soong_config_set,lineage_health,charging_control_charging_path,/sys/class/power_supply/battery/input_suspend)
+-$(call soong_config_set,lineage_health,charging_control_supports_bypass,false)
+-
+ # LiveDisplay
+ PRODUCT_PACKAGES += \
+     vendor.lineage.livedisplay-service.xiaomi_sm6150

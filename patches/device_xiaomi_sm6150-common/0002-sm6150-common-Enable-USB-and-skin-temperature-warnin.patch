@@ -1,0 +1,24 @@
+From 546e013b4214921faa45b83488935936369f7bee Mon Sep 17 00:00:00 2001
+From: Danny Lin <danny@kdrag0n.dev>
+Date: Fri, 19 Jun 2026 21:25:11 +0200
+Subject: [PATCH 2/5] sm6150-common: Enable USB and skin temperature warnings
+
+---
+ .../frameworks/base/packages/SystemUI/res/values/config.xml | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/overlay/frameworks/base/packages/SystemUI/res/values/config.xml b/overlay/frameworks/base/packages/SystemUI/res/values/config.xml
+index 2581dca..e629329 100644
+--- a/overlay/frameworks/base/packages/SystemUI/res/values/config.xml
++++ b/overlay/frameworks/base/packages/SystemUI/res/values/config.xml
+@@ -27,4 +27,10 @@
+     <!-- Should we vibrate on an icon animation of the shelf. This should only be active if the
+     vibrator is capable of subtle vibrations -->
+     <bool name="config_vibrateOnIconAnimation">true</bool>
++
++    <!-- Whether to show a warning notification when device's skin temperature is high. -->
++    <integer name="config_showTemperatureWarning">1</integer>
++
++    <!-- Whether to show a alarm dialog when device's usb port is overheating. -->
++    <integer name="config_showUsbPortAlarm">1</integer>
+ </resources>

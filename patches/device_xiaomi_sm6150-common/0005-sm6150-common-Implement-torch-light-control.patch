@@ -1,0 +1,69 @@
+From c1356fea5341b60b1b15483e464efb38b896a243 Mon Sep 17 00:00:00 2001
+From: Dhina17 <dhinalogu@gmail.com>
+Date: Fri, 19 Jun 2026 21:30:01 +0200
+Subject: [PATCH 5/5] sm6150-common: Implement torch light control
+
+Grant cameraserver access to the PM6150L dual-torch brightness and switch nodes.
+
+Co-authored-by: Cyber Knight <cyberknight755@gmail.com>
+---
+ rootdir/etc/ueventd.rc          |  5 +++++
+ sepolicy/vendor/cameraserver.te |  2 ++
+ sepolicy/vendor/file.te         |  3 +++
+ sepolicy/vendor/genfs_contexts  | 10 ++++++++++
+ 4 files changed, 20 insertions(+)
+
+diff --git a/rootdir/etc/ueventd.rc b/rootdir/etc/ueventd.rc
+index 62ea417..cb23bdb 100644
+--- a/rootdir/etc/ueventd.rc
++++ b/rootdir/etc/ueventd.rc
+@@ -185,3 +185,8 @@ firmware_directories /vendor/firmware_mnt/image/
+ 
+ # Charger
+ /sys/class/power_supply/battery charging_enabled   0660    system  system
++
++# Torch control
++/sys/devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:switch_2 brightness 0660 cameraserver camera
++/sys/devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:torch_0 brightness 0660 cameraserver camera
++/sys/devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:torch_1 brightness 0660 cameraserver camera
+diff --git a/sepolicy/vendor/cameraserver.te b/sepolicy/vendor/cameraserver.te
+index 1f31860..1e5c007 100644
+--- a/sepolicy/vendor/cameraserver.te
++++ b/sepolicy/vendor/cameraserver.te
+@@ -1 +1,3 @@
+ hal_client_domain(cameraserver, hal_motor)
++allow cameraserver sysfs_torch:file rw_file_perms;
++allow cameraserver sysfs_leds:dir r_dir_perms;
+diff --git a/sepolicy/vendor/file.te b/sepolicy/vendor/file.te
+index 8d23094..d4b6dde 100644
+--- a/sepolicy/vendor/file.te
++++ b/sepolicy/vendor/file.te
+@@ -1,5 +1,8 @@
+ # Data files
+ type per_boot_file, file_type, data_file_type, core_data_file_type;
+ 
++# Torch
++type sysfs_torch, fs_type, sysfs_type;
++
+ # Touchpanel
+ type sysfs_touchpanel, fs_type, sysfs_type;
+diff --git a/sepolicy/vendor/genfs_contexts b/sepolicy/vendor/genfs_contexts
+index 9380549..e56d280 100644
+--- a/sepolicy/vendor/genfs_contexts
++++ b/sepolicy/vendor/genfs_contexts
+@@ -68,5 +68,15 @@ genfscon sysfs /devices/platform/soc/soc:maxim_ds28e16/power_supply/batt_verify/
+ genfscon sysfs /devices/platform/soc/soc:fingerprint_fpc/wakeup                                                                                                                             u:object_r:sysfs_wakeup:s0
+ genfscon sysfs /devices/virtual/input/input1/wakeup                                                                                                                                         u:object_r:sysfs_wakeup:s0
+ 
++# Torch
++genfscon sysfs /devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/flashlight/brightness          u:object_r:sysfs_leds:s0
++genfscon sysfs /devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:torch_0/brightness         u:object_r:sysfs_torch:s0
++genfscon sysfs /devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:torch_0/max_brightness     u:object_r:sysfs_torch:s0
++genfscon sysfs /devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:torch_1/brightness         u:object_r:sysfs_torch:s0
++genfscon sysfs /devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:torch_1/max_brightness     u:object_r:sysfs_torch:s0
++genfscon sysfs /devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:switch_0/brightness        u:object_r:sysfs_leds:s0
++genfscon sysfs /devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:switch_1/brightness        u:object_r:sysfs_leds:s0
++genfscon sysfs /devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:switch_2/brightness        u:object_r:sysfs_torch:s0
++
+ # Touchpanel
+ genfscon sysfs /devices/virtual/touch/touch_dev/        u:object_r:sysfs_touchpanel:s0

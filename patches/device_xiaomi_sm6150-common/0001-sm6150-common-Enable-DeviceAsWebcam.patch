@@ -1,0 +1,40 @@
+From 1276bc3d651bd588acc00825faadd431a3a2c584 Mon Sep 17 00:00:00 2001
+From: Yumi Yukimura <me.cafebabe@gmail.com>
+Date: Fri, 19 Jun 2026 21:25:04 +0200
+Subject: [PATCH 1/5] sm6150-common: Enable DeviceAsWebcam
+
+Enable UVC mode, ignore the device's non-UVC V4L2 nodes, and opt out of VIDEO_ENCODE buffer usage to avoid swapped red and blue channels on Qualcomm gralloc.
+
+Co-authored-by: Alexander Koskovich <akoskovich@pm.me>
+---
+ .../interface/res/raw/ignored_v4l2_nodes.json              | 7 +++++++
+ vendor.prop                                                | 2 ++
+ 2 files changed, 9 insertions(+)
+ create mode 100644 overlay/packages/services/DeviceAsWebcam/interface/res/raw/ignored_v4l2_nodes.json
+
+diff --git a/overlay/packages/services/DeviceAsWebcam/interface/res/raw/ignored_v4l2_nodes.json b/overlay/packages/services/DeviceAsWebcam/interface/res/raw/ignored_v4l2_nodes.json
+new file mode 100644
+index 0000000..1eb6295
+--- /dev/null
++++ b/overlay/packages/services/DeviceAsWebcam/interface/res/raw/ignored_v4l2_nodes.json
+@@ -0,0 +1,7 @@
++[
++    "/dev/video0",
++    "/dev/video1",
++    "/dev/video2",
++    "/dev/video32",
++    "/dev/video33"
++]
+diff --git a/vendor.prop b/vendor.prop
+index 62b808b..34b5ae9 100644
+--- a/vendor.prop
++++ b/vendor.prop
+@@ -227,6 +227,8 @@ telephony.lteOnCdmaDevice=1
+ persist.rcs.supported=1
+ 
+ # USB
++ro.usb.uvc.disable_video_encode_flag=true
++ro.usb.uvc.enabled=true
+ sys.usb.mtp.batchcancel=1
+ vendor.usb.controller=a600000.dwc3
+ vendor.usb.diag.func.name=diag
