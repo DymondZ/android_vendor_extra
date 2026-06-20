@@ -1,0 +1,27 @@
+From 8dde8fb03e3f30b5dc14961299f2e84f20c05eee Mon Sep 17 00:00:00 2001
+From: bengris32 <bengris32@protonmail.ch>
+Date: Tue, 8 Oct 2024 07:29:59 +0000
+Subject: [PATCH 6/9] sweet: camera: Implement setTorchModeExt
+
+Change-Id: Id61420be75b7efd1d13a4b0ee1d103ebd3835516
+Signed-off-by: electimon <electimon@gmail.com>
+Signed-off-by: Cyber Knight <cyberknight755@gmail.com>
+---
+ camera/CameraProviderExtension.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/camera/CameraProviderExtension.cpp b/camera/CameraProviderExtension.cpp
+index 58a551a..577648c 100644
+--- a/camera/CameraProviderExtension.cpp
++++ b/camera/CameraProviderExtension.cpp
+@@ -70,3 +70,8 @@ void setTorchStrengthLevelExt(int32_t torchStrength) {
+     if (torchStrength > 0)
+         set(TOGGLE_SWITCH, 255);
+ }
++
++void setTorchModeExt(bool enabled) {
++    int32_t strength = getTorchDefaultStrengthLevelExt();
++    setTorchStrengthLevelExt(enabled ? strength : 0);
++}
+-- 
+2.53.0

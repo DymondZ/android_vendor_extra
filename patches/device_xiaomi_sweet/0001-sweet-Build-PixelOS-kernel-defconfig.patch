@@ -1,9 +1,9 @@
-From e558781c66365fe4616b50a8a76be3b176be24ea Mon Sep 17 00:00:00 2001
-From: DymondZ <gh3ttokill4@gmail.com>
-Date: Fri, 19 Jun 2026 22:08:52 +0200
-Subject: [PATCH] sweet: Build PixelOS kernel defconfig
+From aa559316df4253bd28adc70ca55907785ae13966 Mon Sep 17 00:00:00 2001
+From: basamaryan <basam.aryan@gmail.com>
+Date: Sun, 25 Jun 2023 21:09:51 +0530
+Subject: [PATCH 1/9] sweet: Switch to VantomKernel
 
-The PixelOS kernel uses the monolithic sweet_defconfig instead of the Lineage vendor base plus sweet config fragment.
+Change-Id: I1d543e4d9c3ef484f83fff79581a3f92e4692ff9
 ---
  BoardConfig.mk | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
@@ -23,4 +23,3 @@ index fab23ae..724b6b8 100644
  BOARD_BOOTIMAGE_PARTITION_SIZE := 134217728
 -- 
 2.53.0
-

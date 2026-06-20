@@ -1,10 +1,13 @@
-From 652effa000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: DymondZ <gh3ttokill4@gmail.com>
-Date: Fri, 19 Jun 2026 22:31:00 +0200
-Subject: [PATCH 3/5] sweet: powerhint: Drop obsolete top-app schedtune hints
+From 652effa81ec5379b81e59ea04b5e443489f19dff Mon Sep 17 00:00:00 2001
+From: Giovanni Ricca <giovanniricca@proton.me>
+Date: Wed, 27 Aug 2025 15:56:53 +0200
+Subject: [PATCH 3/9] sweet: powerhint: Drop TASchedtune{Boost, HighCap}
 
-The legacy /dev/stune top-app nodes are not present with the current kernel
-scheduler. Avoid repeated failed writes from the power HAL.
+Reason: This is part of Google's sched ricing. We currently don't
+include said chain on VantomKernel, so let's just remove it to clean up
+our logs.
+
+Change-Id: I53a55926d76599c9a3d29c934adec74f7109f3ae
 ---
  configs/power/powerhint.json | 30 ------------------------------
  1 file changed, 30 deletions(-)

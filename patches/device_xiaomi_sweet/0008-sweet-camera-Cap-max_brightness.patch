@@ -1,0 +1,44 @@
+From 4e40fbb0c19c990251fe0230b4d4f98128516b20 Mon Sep 17 00:00:00 2001
+From: John Galt <johngaltfirstrun@gmail.com>
+Date: Fri, 7 Feb 2025 15:13:46 +0000
+Subject: [PATCH 8/9] sweet: camera: Cap max_brightness
+
+* Our maximum brightness is 500.
+* However, for safety related reason, I have capped this to 255.
+* 255 is more than sufficient, and I do not want to be responsible for LED damage.
+
+* Finding the default percentage took some trial and error, in this case, 59% correlated to 75.
+
+Co-authored-by: rahul <rahul@aospa.co>
+Change-Id: I5c354596989c7fe7a0f07ca89780be7d420214b1
+Signed-off-by: rahul <rahul@aospa.co>
+---
+ camera/CameraProviderExtension.cpp | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/camera/CameraProviderExtension.cpp b/camera/CameraProviderExtension.cpp
+index 99fa053..3a2e034 100644
+--- a/camera/CameraProviderExtension.cpp
++++ b/camera/CameraProviderExtension.cpp
+@@ -44,13 +44,15 @@ bool supportsSetTorchModeExt() {
+ }
+ 
+ int32_t getTorchDefaultStrengthLevelExt() {
+-    return 50;
++    // Our default value is 75. This corresponds to 15%.
++    // As we have changed the maximum value, 59% now corresponds to 75.
++    return 59;
+ }
+ 
+ int32_t getTorchMaxStrengthLevelExt() {
+-    // In our device, both LEDs has same maximum value so get from one.
+-    auto node = kTorchLedPaths[0] + "/" + TORCH_MAX_BRIGHTNESS;
+-    return get(node, 0);
++    // 255 out of 500 is a sane brightness.
++    // Let's cap it to 255 as max, we can go much higher, but I don't want to test this.
++    return 255;
+ }
+ 
+ int32_t getTorchStrengthLevelExt() {
+-- 
+2.53.0

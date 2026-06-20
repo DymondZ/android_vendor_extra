@@ -1,24 +1,28 @@
-From c7e4cb9000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Cyber Knight <cyberknight755@gmail.com>
-Date: Fri, 19 Jun 2026 22:32:00 +0200
-Subject: [PATCH 4/5] sweet: camera: Implement torch strength control
+From c7e4cb9a8ef2526f0e8414a7c3d441fa918786ae Mon Sep 17 00:00:00 2001
+From: Dhina17 <dhinalogu@gmail.com>
+Date: Sun, 9 Feb 2025 17:21:53 +0100
+Subject: [PATCH 4/9] sweet: Implement torch light control
 
-Drive both PM6150L torch LEDs from the camera-service extension and cap the
-reported maximum at 255. The matching sysfs permissions are supplied by the
-sm6150-common torch-control patch.
+[RealJohnGalt:] modify for oneplus usage, add toggle switch
+[cyberknight777]: Adapt nodes and SEPolicy for sunny
+
+Change-Id: I0b86fbeefbe3b951c5b9827a06c066dd71ada002
+Signed-off-by: Cyber Knight <cyberknight755@gmail.com>
+Signed-off-by: clarencelol <clarencekuiek@proton.me>
 ---
- camera/Android.bp                  | 23 ++++++++++
- camera/CameraProviderExtension.cpp | 69 +++++++++++++++++++++++++++++
+ camera/Android.bp                  | 22 ++++++++++++
+ camera/CameraProviderExtension.cpp | 65 +++++++++++++++++++++++++++++++++++
  device.mk                          |  3 ++
- 3 files changed, 95 insertions(+)
+ 3 files changed, 90 insertions(+)
  create mode 100644 camera/Android.bp
  create mode 100644 camera/CameraProviderExtension.cpp
 
 diff --git a/camera/Android.bp b/camera/Android.bp
 new file mode 100644
+index 0000000..960f03f
 --- /dev/null
 +++ b/camera/Android.bp
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,22 @@
 +//
 +// Copyright (C) 2022 The LineageOS Project
 +//
@@ -33,20 +37,20 @@ new file mode 100644
 +// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 +// See the License for the specific language governing permissions and
 +// limitations under the License.
-+//
 +
 +cc_library_static {
 +    name: "libcameraservice_extension.sweet",
 +    srcs: ["CameraProviderExtension.cpp"],
 +    include_dirs: [
-+        "frameworks/av/services/camera/libcameraservice/common",
++        "frameworks/av/services/camera/libcameraservice/common"
 +    ],
 +}
 diff --git a/camera/CameraProviderExtension.cpp b/camera/CameraProviderExtension.cpp
 new file mode 100644
+index 0000000..95dd68e
 --- /dev/null
 +++ b/camera/CameraProviderExtension.cpp
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,65 @@
 +/*
 + * Copyright (C) 2024 LibreMobileOS Foundation
 + *
@@ -58,6 +62,7 @@ new file mode 100644
 +#include <fstream>
 +
 +#define TORCH_BRIGHTNESS "brightness"
++#define TORCH_MAX_BRIGHTNESS "max_brightness"
 +#define TOGGLE_SWITCH "/sys/devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:switch_2/brightness"
 +
 +static std::string kTorchLedPaths[] = {
@@ -65,12 +70,14 @@ new file mode 100644
 +        "/sys/devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-05/c440000.qcom,spmi:qcom,pm6150l@5:qcom,leds@d300/leds/led:torch_1",
 +};
 +
++/** Write value to path and close file. */
 +template <typename T>
 +static void set(const std::string& path, const T& value) {
 +    std::ofstream file(path);
 +    file << value;
 +}
 +
++/** Read value from the path and close file. */
 +template <typename T>
 +static T get(const std::string& path, const T& def) {
 +    std::ifstream file(path);
@@ -84,39 +91,33 @@ new file mode 100644
 +    return true;
 +}
 +
-+bool supportsSetTorchModeExt() {
-+    return false;
-+}
-+
 +int32_t getTorchDefaultStrengthLevelExt() {
-+    // The stock default (75) is 59% after capping the maximum at 255.
-+    return 59;
++    return 7;
 +}
 +
 +int32_t getTorchMaxStrengthLevelExt() {
-+    // The hardware permits more, but 255 is a conservative thermal limit.
-+    return 255;
++    // In our device, both LEDs has same maximum value so get from one.
++    auto node = kTorchLedPaths[0] + "/" + TORCH_MAX_BRIGHTNESS;
++    return get(node, 0);
 +}
 +
 +int32_t getTorchStrengthLevelExt() {
-+    return get(kTorchLedPaths[0] + "/" + TORCH_BRIGHTNESS, 0);
++    // We write same value in both LEDs, so get from one.
++    auto node = kTorchLedPaths[0] + "/" + TORCH_BRIGHTNESS;
++    return get(node, 0);
 +}
 +
-+void setTorchStrengthLevelExt(int32_t torchStrength, bool enabled) {
++void setTorchStrengthLevelExt(int32_t torchStrength) {
 +    set(TOGGLE_SWITCH, 0);
 +    for (auto& path : kTorchLedPaths) {
-+        set(path + "/" + TORCH_BRIGHTNESS, torchStrength);
++        auto node = path + "/" + TORCH_BRIGHTNESS;
++        set(node, torchStrength);
 +    }
-+    if (enabled) {
++    if (torchStrength > 0)
 +        set(TOGGLE_SWITCH, 255);
-+    }
-+}
-+
-+void setTorchModeExt(bool enabled) {
-+    const int32_t strength = getTorchDefaultStrengthLevelExt();
-+    setTorchStrengthLevelExt(enabled ? strength : 0, enabled);
 +}
 diff --git a/device.mk b/device.mk
+index 1bb35ff..0d2d4f2 100644
 --- a/device.mk
 +++ b/device.mk
 @@ -21,6 +21,9 @@ PRODUCT_COPY_FILES += \

@@ -1,9 +1,10 @@
-From a8ac756000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: DymondZ <gh3ttokill4@gmail.com>
-Date: Fri, 19 Jun 2026 22:30:00 +0200
-Subject: [PATCH 2/5] sweet: audio: Add ACDB IDs for voice recording
+From a8ac7561dcfd4b8cbc11eb8646b22de740568c21 Mon Sep 17 00:00:00 2001
+From: trpsl <trpsl@pixelexperience.org>
+Date: Tue, 15 Dec 2020 23:05:08 +0100
+Subject: [PATCH 2/9] sweet: audio: add ACDB IDs for voice recording
 
-Define calibration IDs for the AEC and NS voice-recording input devices.
+Change-Id: I911491d186c85416ce6236ef5a253edc4badcc0b
+Signed-off-by: trpsl <trpsl@pixelexperience.org>
 ---
  configs/audio/audio_platform_info_intcodec.xml | 2 ++
  1 file changed, 2 insertions(+)

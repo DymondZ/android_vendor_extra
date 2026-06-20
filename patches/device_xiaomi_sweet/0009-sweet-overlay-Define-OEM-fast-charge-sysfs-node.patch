@@ -1,9 +1,14 @@
-From b2eebdb000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: DymondZ <gh3ttokill4@gmail.com>
-Date: Fri, 19 Jun 2026 22:33:00 +0200
-Subject: [PATCH 5/5] sweet: overlay: Define OEM fast-charge sysfs node
+From b2eebdb7f943099bb8c68bedddee00b0781e3fa4 Mon Sep 17 00:00:00 2001
+From: Adithya R <gh0strider.2k18.reborn@gmail.com>
+Date: Sun, 6 Jun 2021 19:37:39 +0530
+Subject: [PATCH 9/9] sweet: overlay: Define OEM fast charge sysfs node
 
-Allow SystemUI to distinguish Xiaomi fast charging through the BMS node.
+ * this forces android to display "charging rapidly" whenever our
+   proprietary 33w charger is connected, based on the value of
+   this node (0/1)
+
+Change-Id: I2a36ccb62621672e480e4b25a335410044fbb372
+Signed-off-by: basamaryan <basam.aryan@gmail.com>
 ---
  .../frameworks/base/core/res/res/values/config.xml | 11 +++++++++++
  1 file changed, 11 insertions(+)
