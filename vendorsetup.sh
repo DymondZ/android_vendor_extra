@@ -27,12 +27,8 @@ convertsecs() {
 
 get_device_name() {
     case "$1" in
-        "martini") echo "OnePlus 9RT" ;;
         "sweet")   echo "Xiaomi Redmi Note 10 Pro / Redmi Note 10 Pro Max" ;;
-        "kiev")    echo "Motorola moto g 5G / moto one 5G ace" ;;
-        "davinci") echo "Xiaomi Redmi K20 / Mi 9T" ;;
-        "Q25")     echo "Zinwa Q25" ;;
-        "odin2thor") echo "AYN Thor" ;;
+        "dm3q") echo "Samsung Galaxy S23 Ultra" ;;
         *)         echo "$1" ;; 
     esac
 }
